@@ -4,7 +4,8 @@
 
 #![no_std]
 
-#[macro_use]
+#![deny(warnings)]
+
 extern crate static_assertions;
 
 #[cfg(any(feature="alloc",test))]
@@ -24,7 +25,7 @@ pub mod boxed;
 
 #[cfg(test)]
 mod some_tests{
-    use crate::traits::{TraitVTable, StableVTableTrait, StablePointerCast, StablePointerLifetime, StablePointer};
+    use crate::traits::{TraitVTable, StableVTableTrait, StablePointer};
     use crate::refs::StableRef;
     use crate::ptr::{StableNonNull, StablePtr};
     pub trait WithStableVTable{
@@ -47,8 +48,8 @@ mod some_tests{
         type VTable = __WithStableVTable_VTable;
     }
 
-    assert_eq_size!(StableRef<dyn WithStableVTable>,Option<StableRef<dyn WithStableVTable>>);
-    assert_eq_size!(StableNonNull<dyn WithStableVTable>,Option<StableNonNull<dyn WithStableVTable>>);
+    static_assertions::assert_eq_size!(StableRef<dyn WithStableVTable>,Option<StableRef<dyn WithStableVTable>>);
+    static_assertions::assert_eq_size!(StableNonNull<dyn WithStableVTable>,Option<StableNonNull<dyn WithStableVTable>>);
 
     #[test]
     pub fn test_ref_none_is_null(){

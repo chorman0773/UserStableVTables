@@ -62,21 +62,87 @@ pub unsafe trait StablePointerCast<Pointer: StablePointer<Self>>: StableVTableTr
 /// Additionally, it shall be valid to transmute from any implementation of StableRef,
 ///  and to an implementation of StableRef or StableMut, provided the reference validity requirements are upheld.
 pub unsafe trait StablePointer<Trait: StableVTableTrait + ?Sized>: Copy + Clone + for<'a> StablePointerLifetime<'a,Trait>{
-    /// Retrieves the size of the value from
+    /// Retrieves the alignment of the value from the underlying object
+    /// unsafe because there are currently no limitations on the validity of vtables for non-reference pointers
+    /// This shall return the value of the vtables size field
+    ///
+    /// Safety
+    /// --------------------
+    /// The vtable shall be a derefenceable pointer
     unsafe fn size_of_val(self) -> usize;
+    /// Retrieves the alignment of the value from the underlying object
+    /// unsafe because there are currently no limitations on the validity of vtables for non-reference pointers
+    /// This shall return the value of the vtables size field
+    ///
+    /// Safety
+    /// --------------------
+    /// The vtable shall be a derefenceable pointer
     unsafe fn align_of_val(self) -> usize;
+
+    /// Executes the destructor operation on the value
+    /// The pointed-to value may not be further used,
+    ///  even if the destructor operation is trivial.
+    ///
+    /// Safety
+    /// --------------------
+    /// The vtable shall be a derefernceable pointer.
+    /// The data shall be a dereferenceable pointer which is valid for writing for at least `size` from the vtable,
+    ///  and shall be aligned to at least align, additionally, it shall not be accessed from an aliasing region of memory
+    ///  (this constraint applies even if there is no destructor or if the destructor operation is trivial).
+    ///
+    /// After this call, the object pointed by `data` may not be access (but the pointer is still valid for reading).
     unsafe fn drop_in_place(self) -> ();
+
+    /// Deallocates the pointed to value.
+    /// The pointer may not be futher used,
+    ///  even if the destructor operation is trivial.
+    ///
+    /// Safety
+    /// --------------------
+    /// The vtable shall be a derefernceable pointer.
+    /// The data shall be a dereferenceable pointer which is valid for writing for at least `size` from the vtable,
+    ///  and shall be aligned to at least align, additionally, it shall not be accessed from an aliasing region of memory
+    ///  (this constraint applies even if there is no destructor or if the destructor operation is trivial).
+    ///
+    /// After this call, the pointer is valid for neither reading nor writing.
+
     unsafe fn dealloc(self) -> ();
+
     ///
     /// Dereferences the pointer
     /// All requirements of the equivalent reference from rust shall be upheld or the behaviour is undefined.
     /// This operation shall be equivalent to a transmute.
+    ///
+    /// Safety
+    /// -------------------
+    /// The vtable shall be a dereferenceable pointer.
+    /// The data shall be a dereferenceable pointer which is valid for read for at least `size` from the vtable,
+    ///  and shall be aligned to at least align, additionally, it shall not be modified for the lifetime of the reference
     unsafe fn deref<'a>(self) -> <Self as StablePointerLifetime<'a,Trait>>::Reference
         where Trait: 'a ;
 
+    ///
+    /// Dereferences the pointer
+    /// All requirements of the equivalent reference from rust shall be upheld or the behaviour is undefined.
+    /// This operation shall be equivalent to a transmute.
+    ///
+    /// Safety
+    /// -------------------
+    /// The vtable shall be a dereferenceable pointer.
+    /// The data shall be a dereferenceable pointer which is valid for read for at least `size` from the vtable,
+    ///  and shall be aligned to at least align, additionally, it shall not be accessed from any other region
+    ///  for the lifetime of the reference
     unsafe fn deref_mut<'a>(self) -> <Self as StablePointerLifetime<'a,Trait>>::MutReference
         where Trait: 'a;
 
+
+    /// Converts between different StablePointer types.
+    ///
+    /// Safety
+    /// --------------
+    /// The target pointer type may validly impose a non-null restriction.
+    ///  If such a restriction is imposed, neither data nor the vtable may be a null pointer.
+    ///
     unsafe fn into_other<P: StablePointer<Trait>>(self) -> P{
         core::mem::transmute_copy(&self)
     }
@@ -94,7 +160,11 @@ pub unsafe trait StablePointer<Trait: StableVTableTrait + ?Sized>: Copy + Clone 
 /// Implementations may assume all of the above is true.
 pub unsafe trait StableReference<'a,Trait: StableVTableTrait +'a + ?Sized>: 'a {
     type Pointer: StablePointer<Trait>;
+    ///
+    /// Obtains the size of the referenced value
     fn size_of_val(&self) -> usize where Trait: 'a;
+    ///
+    /// Obtains the align of the referenced value
     fn align_of_val(&self) -> usize where Trait: 'a;
     /// Converts the value into a raw pointer
     /// This operation shall be equivalent to a transmute.
@@ -110,3 +180,4 @@ pub unsafe trait StableReference<'a,Trait: StableVTableTrait +'a + ?Sized>: 'a {
 ///
 /// Implementations may assume all of the above is true
 pub unsafe trait StableMutable<'a,Trait: StableVTableTrait +'a + ?Sized>: StableReference<'a,Trait>{}
+
