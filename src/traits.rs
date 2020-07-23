@@ -1,4 +1,3 @@
-use std::ops::Deref;
 
 ///
 /// Defines a type which is a valid vtable for a stable_vtable trait from rfc 2955
@@ -6,11 +5,11 @@ use std::ops::Deref;
 ///  and that the defined invariants for the fields of the vtable are upheld.
 /// Additionally, implementations for the same `Trait` may be freely transmuted between each other.
 ///
-pub unsafe trait TraitVTable<Trait: StableVTableTrait+?Sized>{}
+pub unsafe trait TraitVTable<Trait: StableVTableTrait+?Sized>: 'static{}
 
 ///
 /// Defines a type which is a trait object for a stable_vtable trait as per rfc 2955
-pub unsafe trait StableVTableTrait{
+pub unsafe trait StableVTableTrait: 'static{
     type VTable: TraitVTable<Self>;
 }
 
@@ -30,7 +29,7 @@ pub struct VTable{
     pub drop_in_place: Option<unsafe extern"C" fn(*mut ())->()>,
     ///
     /// If present, points to a function which can safely deallocate the pointer
-    pub dealloc: Option<unsafe extern"C" fn(*mut ())->()>,
+    pub dealloc: unsafe extern"C" fn(*mut ())->(),
     ///
     /// Each entry points to the implementation of each trait function which can be called on a trait object
     ///  in the declaration order in the trait.
@@ -47,11 +46,13 @@ pub unsafe trait StablePointerCast<Pointer: StablePointer<Self>>: StableVTableTr
     unsafe fn to_stable(p: *mut Self) -> Pointer;
     fn to_stable_ref(r: &Self) -> <Pointer as StablePointerLifetime<'_,Self>>::Reference;
     fn to_stable_mut(r: &mut Self) -> <Pointer as StablePointerLifetime<'_,Self>>::MutReference;
-    fn from_stable(s: Self) -> *mut Trait;
-    fn from_stable_ref(r: <Pointer as StablePointerLifetime<'_,Self>>::Reference) -> &mut Self;
-    fn from_stable_mut(r: <Pointer as StablePointerLifetime<'_,Self>>::MutReference) -> &mut Self;
-    fn borrow_stable_ref(r: &<Pointer as StablePointerLifetime<'_,Self>>::Reference) -> &Self;
-    fn borrow_stable_mut(r: &<Pointer as StablePointerLifetime<'_,Self>>::MutReference) -> &mut Self;
+    fn from_stable(s: Self) -> *mut Self;
+    fn from_stable_ref<'a>(r: <Pointer as StablePointerLifetime<'a,Self>>::Reference) -> &'a mut Self
+        where Self: 'a;
+    fn from_stable_mut<'a>(r: <Pointer as StablePointerLifetime<'a,Self>>::MutReference) -> &'a mut Self
+        where Self: 'a;
+    fn borrow_stable_ref<'a,'b: 'a>(r: &'a <Pointer as StablePointerLifetime<'b,Self>>::Reference) -> &'a Self;
+    fn borrow_stable_mut<'a,'b: 'a>(r: &'a mut<Pointer as StablePointerLifetime<'b,Self>>::MutReference) -> &'a mut Self;
 }
 
 ///
@@ -60,24 +61,24 @@ pub unsafe trait StablePointerCast<Pointer: StablePointer<Self>>: StableVTableTr
 ///  except that implementations may validly impose a NonNull requirement on both the data and vtable pointers.
 /// Additionally, it shall be valid to transmute from any implementation of StableRef,
 ///  and to an implementation of StableRef or StableMut, provided the reference validity requirements are upheld.
-pub unsafe trait StablePointer<Trait: StableVTableTrait + ?Sized>: Copy + Clone + for<'a> StablePointerLifetime<'a>{
+pub unsafe trait StablePointer<Trait: StableVTableTrait + ?Sized>: Copy + Clone + for<'a> StablePointerLifetime<'a,Trait>{
     /// Retrieves the size of the value from
     unsafe fn size_of_val(self) -> usize;
     unsafe fn align_of_val(self) -> usize;
-    unsafe fn drop_in_place(self) -> usize;
-    unsafe fn dealloc(self) -> usize;
+    unsafe fn drop_in_place(self) -> ();
+    unsafe fn dealloc(self) -> ();
     ///
     /// Dereferences the pointer
     /// All requirements of the equivalent reference from rust shall be upheld or the behaviour is undefined.
     /// This operation shall be equivalent to a transmute.
-    unsafe fn deref<'a>(self) -> <Self as StablePointerLifetime<'a>>::Reference
+    unsafe fn deref<'a>(self) -> <Self as StablePointerLifetime<'a,Trait>>::Reference
         where Trait: 'a ;
 
-    unsafe fn deref_mut<'a>(self) -> <Self as StablePointerLifetime<'a>>::MutReference
+    unsafe fn deref_mut<'a>(self) -> <Self as StablePointerLifetime<'a,Trait>>::MutReference
         where Trait: 'a;
 
     unsafe fn into_other<P: StablePointer<Trait>>(self) -> P{
-        core::mem::transmute(self)
+        core::mem::transmute_copy(&self)
     }
 }
 
@@ -91,7 +92,7 @@ pub unsafe trait StablePointer<Trait: StableVTableTrait + ?Sized>: Copy + Clone 
 /// data shall be valid for reading for size, and well aligned to align for 'a.
 ///
 /// Implementations may assume all of the above is true.
-pub unsafe trait StableReference<'a,Trait: StableVTableTrait + ?Sized>: 'a {
+pub unsafe trait StableReference<'a,Trait: StableVTableTrait +'a + ?Sized>: 'a {
     type Pointer: StablePointer<Trait>;
     fn size_of_val(&self) -> usize where Trait: 'a;
     fn align_of_val(&self) -> usize where Trait: 'a;
@@ -108,4 +109,4 @@ pub unsafe trait StableReference<'a,Trait: StableVTableTrait + ?Sized>: 'a {
 ///  for 'a.
 ///
 /// Implementations may assume all of the above is true
-pub unsafe trait StableMutable<'a,Trait: StableVTableTrait + ?Sized>: StableReference<'a,Trait>{}
+pub unsafe trait StableMutable<'a,Trait: StableVTableTrait +'a + ?Sized>: StableReference<'a,Trait>{}

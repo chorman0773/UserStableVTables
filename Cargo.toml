@@ -3,7 +3,13 @@ name = "user_stable_vtable"
 version = "0.1.0"
 authors = ["Connor Horman <chorman64@gmail.com>"]
 edition = "2018"
-
+repository = "https://github.com/chorman0773/UserStableVTables.git"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+
+
+[features]
+alloc = []
+box = ["alloc"]
+default = ["box"]
