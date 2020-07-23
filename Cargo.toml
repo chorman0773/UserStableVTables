@@ -1,6 +1,6 @@
 [package]
 name = "user_stable_vtable"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Connor Horman <chorman64@gmail.com>"]
 edition = "2018"
 repository = "https://github.com/chorman0773/UserStableVTables.git"
