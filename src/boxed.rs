@@ -2,9 +2,14 @@ use crate::traits::{StableVTableTrait, StablePointer, StablePointerCast};
 use crate::ptr::StableNonNull;
 use core::ptr::NonNull;
 
-use ::alloc::boxed::Box as RustBox;
+use alloc::boxed::Box as RustBox;
 use core::ops::{Deref, DerefMut};
 
+/// A type-erased pointer with stable layout to a trait object
+/// This pointer has the same layout as `std::boxed::Box<dyn Trait>` for `#[stable_vtable]` traits
+///  as with [[RFC 2955]](https://github.com/rust-lang/rfcs/pull/2955).
+/// Note: While `std::boxed::Box<T>` has special handling when inside `Option<T>`, no such guarantee is stably made.
+///  There are test suites that check to ensure this is correct.
 #[repr(transparent)]
 pub struct Box<Trait: StableVTableTrait + ?Sized>{
     ptr: StableNonNull<Trait>

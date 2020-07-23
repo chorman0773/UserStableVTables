@@ -4,10 +4,14 @@ use core::ops::{Deref, DerefMut};
 use core::ptr::NonNull;
 use core::marker::PhantomData;
 
+/// A type-erased pointer with stable layout to a trait object
+/// This pointer has the same layout as `&dyn Trait` for `#[stable_vtable]` traits
+///  as with [[RFC 2955]](https://github.com/rust-lang/rfcs/pull/2955).
+/// Note: While `&T` has special handling when inside `Option<T>`, no such guarantee is stably made.
+///  There are test suites that check to ensure this is correct.
 ///
-/// Safety: Must satisfy all the rules of &dyn Trait, in addition to the rules for references defined by rfc 2955
-/// Note: Here the vtable has to satisfy 'a.
-/// It is not yet specified the lifetime a vtable has to satisfy.
+/// Also Note: Specifically, this implementation imposes a restriction that the VTable reference be valid for reading for 'a.
+///  It is not yet specified the required validity of the vtable
 #[repr(C)]
 pub struct StableRef<'a,Trait: StableVTableTrait + ?Sized>{
     data: NonNull<()>,
@@ -31,6 +35,8 @@ unsafe impl<'a,Trait: StableVTableTrait + ?Sized> StableReference<'a,Trait> for 
     }
 }
 
+
+
 impl<Trait: StableVTableTrait + StablePointerCast<StablePtr<Trait>> + ?Sized> Deref for StableRef<'_,Trait>{
     type Target = Trait;
 
@@ -45,10 +51,14 @@ impl<'a,'b: 'a,Trait: StableVTableTrait + ?Sized> From<StableMut<'b,Trait>> for 
     }
 }
 
+/// A type-erased pointer with stable layout to a trait object
+/// This pointer has the same layout as `&dyn Trait` for `#[stable_vtable]` traits
+///  as with [[RFC 2955]](https://github.com/rust-lang/rfcs/pull/2955).
+/// Note: While `&mut T` has special handling when inside `Option<T>`, no such guarantee is stably made.
+///  There are test suites that check to ensure this is correct.
 ///
-/// Safety: Must satisfy all the rules of &dyn Trait, in addition to the rules for references defined by rfc 2955
-/// Note: Here the vtable has to satisfy 'a.
-/// It is not yet specified the lifetime a vtable has to satisfy.
+/// Also Note: Specifically, this implementation imposes a restriction that the VTable reference be valid for reading for 'a.
+///  It is not yet specified the required validity of the vtable
 #[repr(C)]
 pub struct StableMut<'a,Trait: StableVTableTrait + ?Sized>{
     data: NonNull<()>,

@@ -1,6 +1,6 @@
 [package]
 name = "user_stable_vtable"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Connor Horman <chorman64@gmail.com>"]
 edition = "2018"
 repository = "https://github.com/chorman0773/UserStableVTables.git"
@@ -12,7 +12,7 @@ A partial implementation of [RFC 2955], written in stable rust.
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-
+static_assertions = "1.1.0"
 
 [features]
 alloc = []

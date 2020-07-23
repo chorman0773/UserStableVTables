@@ -2,10 +2,19 @@ use crate::traits::{StableVTableTrait, StablePointer, StablePointerLifetime, VTa
 use crate::refs::{StableRef, StableMut};
 use core::ptr::NonNull;
 
+/// A type-erased pointer with stable layout to a trait object
+/// This pointer has the same layout as `*mut dyn Trait` for `#[stable_vtable]` traits
+///  as with [[RFC 2955]](https://github.com/rust-lang/rfcs/pull/2955)
 #[repr(C)]
 pub struct StablePtr<Trait: StableVTableTrait + ?Sized>{
     pub data: *mut (),
     pub vtable: *const Trait::VTable
+}
+
+impl<Trait: StableVTableTrait + ?Sized> StablePtr<Trait>{
+    pub fn is_null(self) ->bool{
+        self.data.is_null()
+    }
 }
 
 impl<Trait: StableVTableTrait + ?Sized> From<*mut Trait> for StablePtr<Trait>
@@ -22,6 +31,11 @@ impl<Trait: StableVTableTrait + ?Sized> From<*const Trait> for StablePtr<Trait>
     }
 }
 
+/// A type-erased pointer with stable layout to a trait object
+/// This pointer has the same layout as `NonNull<dyn Trait>` for `#[stable_vtable]` traits
+///  as with [[RFC 2955]](https://github.com/rust-lang/rfcs/pull/2955).
+/// Note: While `NonNull<T>` has special handling when inside `Option<T>`, no such guarantee is stably made.
+///  There are test suites that check to ensure this is correct.
 #[repr(C)]
 pub struct StableNonNull<Trait: StableVTableTrait + ?Sized>{
     pub data: NonNull<()>,
@@ -55,6 +69,8 @@ impl<Trait: StableVTableTrait + ?Sized> From<StableNonNull<Trait>> for StablePtr
         unsafe{ptr.into_other()}
     }
 }
+
+
 unsafe impl<'a,Trait: StableVTableTrait + ?Sized> StablePointerLifetime<'a,Trait> for StablePtr<Trait>{
     type Reference = StableRef<'a,Trait>;
     type MutReference = StableMut<'a,Trait>;
