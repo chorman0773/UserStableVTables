@@ -43,9 +43,21 @@ pub unsafe trait StablePointerLifetime<'a,Trait: StableVTableTrait + ?Sized>: 'a
     type MutReference: StableMutable<'a,Trait>;
 }
 
+pub unsafe trait StablePointerCast<Pointer: StablePointer<Self>>: StableVTableTrait{
+    unsafe fn to_stable(p: *mut Self) -> Pointer;
+    fn to_stable_ref(r: &Self) -> <Pointer as StablePointerLifetime<'_,Self>>::Reference;
+    fn to_stable_mut(r: &mut Self) -> <Pointer as StablePointerLifetime<'_,Self>>::MutReference;
+    fn from_stable(s: Self) -> *mut Trait;
+    fn from_stable_ref(r: <Pointer as StablePointerLifetime<'_,Self>>::Reference) -> &mut Self;
+    fn from_stable_mut(r: <Pointer as StablePointerLifetime<'_,Self>>::MutReference) -> &mut Self;
+    fn borrow_stable_ref(r: &<Pointer as StablePointerLifetime<'_,Self>>::Reference) -> &Self;
+    fn borrow_stable_mut(r: &<Pointer as StablePointerLifetime<'_,Self>>::MutReference) -> &mut Self;
+}
+
 ///
 /// Defines a type which is Layout Compatible with a stable-layout-pointer from rfc 2955.
-/// All implementations of this trait for a particular `Trait` shall be valid to transmute between.
+/// All implementations of this trait for a particular `Trait` shall be valid to transmute between,
+///  except that implementations may validly impose a NonNull requirement on both the data and vtable pointers.
 /// Additionally, it shall be valid to transmute from any implementation of StableRef,
 ///  and to an implementation of StableRef or StableMut, provided the reference validity requirements are upheld.
 pub unsafe trait StablePointer<Trait: StableVTableTrait + ?Sized>: Copy + Clone + for<'a> StablePointerLifetime<'a>{
@@ -64,8 +76,8 @@ pub unsafe trait StablePointer<Trait: StableVTableTrait + ?Sized>: Copy + Clone 
     unsafe fn deref_mut<'a>(self) -> <Self as StablePointerLifetime<'a>>::MutReference
         where Trait: 'a;
 
-    fn into_other<P: StablePointer<Trait>>(self) -> P{
-        unsafe{core::mem::transmute(self)}
+    unsafe fn into_other<P: StablePointer<Trait>>(self) -> P{
+        core::mem::transmute(self)
     }
 }
 

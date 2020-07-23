@@ -1,4 +1,4 @@
-use crate::traits::{StableVTableTrait, StablePointer, StablePointerLifetime, VTable, StableReference};
+use crate::traits::{StableVTableTrait, StablePointer, StablePointerLifetime, VTable, StableReference, StablePointerCast};
 use std::alloc::Layout;
 use crate::refs::{StableRef, StableMut};
 use std::ptr::NonNull;
@@ -9,12 +9,38 @@ pub struct StablePtr<Trait: StableVTableTrait>{
     pub vtable: *const Trait::VTable
 }
 
+impl<Trait: StableVTableTrait> From<*mut Trait> for StablePtr<Trait>
+    where Trait: StablePointerCast<StablePtr<Trait>>{
+    fn from(ptr: *mut Trait) -> Self {
+        unsafe { <Trait as StablePointerCast<StablePtr<Trait>>>::to_stable(ptr) }
+    }
+}
+
+impl<Trait: StableVTableTrait> From<*const Trait> for StablePtr<Trait>
+    where Trait: StablePointerCast<StablePtr<Trait>>{
+    fn from(ptr: *const Trait) -> Self {
+        unsafe { <Trait as StablePointerCast<StablePtr<Trait>>>::to_stable(ptr as *mut Trait) }
+    }
+}
+
 #[repr(C)]
 pub struct StableNonNull<Trait: StableVTableTrait>{
     pub data: NonNull<()>,
     pub vtable: NonNull<Trait::VTable>
 }
 
+impl<Trait: StableVTableTrait> From<NonNull<Trait>> for StableNonNull<Trait>
+    where Trait: StablePointerCast<StableNonNull<Trait>>{
+    fn from(ptr: NonNull<Trait>) -> Self {
+        unsafe { <Trait as StablePointerCast<StableNonNull<Trait>>>::to_stable(ptr.as_ptr() as *mut Trait) }
+    }
+}
+
+impl<Trait: StableVTableTrait> From<StableNonNull<Trait>> for StablePtr<Trait>{
+    fn from(ptr: StableNonNull<Trait>) -> Self {
+        unsafe{ptr.into_other()}
+    }
+}
 unsafe impl<'a,Trait: StableVTableTrait> StablePointerLifetime<'a,Trait> for StablePtr<Trait>{
     type Reference = StableRef<'a,Trait>;
     type MutReference = StableMut<'a,Trait>;
