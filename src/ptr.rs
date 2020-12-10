@@ -92,7 +92,9 @@ unsafe impl<Trait: StableVTableTrait + ?Sized> StablePointer<Trait> for StablePt
     }
 
     unsafe fn dealloc(self) -> () {
-        ((&*self.vtable.cast::<VTable>()).dealloc)(self.data)
+        if let Some(f) = (&*self.vtable.cast::<VTable>()).dealloc{
+            (f)(self.data)
+        }
     }
 
     unsafe fn deref<'a>(self) -> <Self as StablePointerLifetime<'a,Trait>>::Reference
@@ -127,7 +129,9 @@ unsafe impl<Trait: StableVTableTrait + ?Sized> StablePointer<Trait> for StableNo
     }
 
     unsafe fn dealloc(self) -> () {
-        ((self.vtable.cast::<VTable>().as_ref()).dealloc)(self.data.as_ptr())
+        if let Some(f) = (self.vtable.cast::<VTable>().as_ref()).dealloc{
+            (f)(self.data.as_ptr())
+        }
     }
 
     unsafe fn deref<'a>(self) -> <Self as StablePointerLifetime<'a,Trait>>::Reference

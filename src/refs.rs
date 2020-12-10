@@ -15,7 +15,7 @@ use core::marker::PhantomData;
 #[repr(C)]
 pub struct StableRef<'a,Trait: StableVTableTrait + ?Sized>{
     data: NonNull<()>,
-    vtable: &'a VTable,
+    vtable: NonNull<VTable>,
     phantom: PhantomData<&'a Trait>
 }
 
@@ -23,11 +23,11 @@ unsafe impl<'a,Trait: StableVTableTrait + ?Sized> StableReference<'a,Trait> for 
     type Pointer = StablePtr<Trait>;
 
     fn size_of_val(&self) -> usize where Trait: 'a {
-        self.vtable.size
+        unsafe{self.vtable.as_ref().size}
     }
 
     fn align_of_val(&self) -> usize where Trait: 'a {
-        self.vtable.align
+        unsafe{self.vtable.as_ref().align}
     }
 
     fn into_raw(self) -> Self::Pointer {
@@ -62,7 +62,7 @@ impl<'a,'b: 'a,Trait: StableVTableTrait + ?Sized> From<StableMut<'b,Trait>> for 
 #[repr(C)]
 pub struct StableMut<'a,Trait: StableVTableTrait + ?Sized>{
     data: NonNull<()>,
-    vtable: &'a VTable,
+    vtable: NonNull<VTable>,
     phantom: PhantomData<&'a Trait>
 }
 
@@ -71,11 +71,11 @@ unsafe impl<'a,Trait: StableVTableTrait + ?Sized> StableReference<'a,Trait> for 
     type Pointer = StablePtr<Trait>;
 
     fn size_of_val(&self) -> usize where Trait: 'a {
-        self.vtable.size
+        unsafe{self.vtable.as_ref().size}
     }
 
     fn align_of_val(&self) -> usize where Trait: 'a {
-        self.vtable.align
+        unsafe{self.vtable.as_ref().align}
     }
 
     fn into_raw(self) -> Self::Pointer {

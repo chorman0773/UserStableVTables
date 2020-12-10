@@ -17,7 +17,7 @@ pub struct Box<Trait: StableVTableTrait + ?Sized>{
 
 impl<Trait: StableVTableTrait + StablePointerCast<StableNonNull<Trait>> + ?Sized> From<RustBox<Trait>> for Box<Trait>{
     fn from(t: RustBox<Trait>) -> Self {
-        Box{ptr: NonNull::from(RustBox::leak(t)).into()}
+        Box{ptr: unsafe{NonNull::new_unchecked(RustBox::into_raw(t))}.into()}
     }
 }
 

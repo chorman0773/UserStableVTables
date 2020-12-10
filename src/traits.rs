@@ -28,8 +28,8 @@ pub struct VTable{
     /// If present, points to a function which performs the destructor operation for the type
     pub drop_in_place: Option<unsafe extern"C" fn(*mut ())->()>,
     ///
-    /// If present, points to a function which can safely deallocate the pointer
-    pub dealloc: unsafe extern"C" fn(*mut ())->(),
+    /// If present, points to a function which can deallocate pointers to this type
+    pub dealloc: Option<unsafe extern"C" fn(*mut ())->()>,
     ///
     /// Each entry points to the implementation of each trait function which can be called on a trait object
     ///  in the declaration order in the trait.

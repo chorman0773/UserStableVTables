@@ -38,7 +38,7 @@ mod some_tests{
         pub size: usize,
         pub align: usize,
         pub destroy: Option<unsafe extern"C" fn(*mut ())->()>,
-        pub dealloc: unsafe extern"C" fn(*mut ()),
+        pub dealloc: Option<unsafe extern"C" fn(*mut ())>,
         pub _vfn_item: unsafe extern"C" fn(*const ())
     }
 
@@ -85,7 +85,7 @@ mod some_tests{
             size: core::mem::size_of::<StableVTableImpl>(),
             align: core::mem::size_of::<StableVTableImpl>(),
             destroy: None,
-            dealloc: dealloc::<StableVTableImpl>,
+            dealloc: Some(dealloc::<StableVTableImpl>),
             _vfn_item: _vfn_item::<StableVTableImpl>
         };
         let x = Some(unsafe{StablePtr::<dyn WithStableVTable>{
